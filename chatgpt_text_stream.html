@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+
+		<style>
+			.blinking-cursor {
+				margin-left: 5px;
+				background-color: #fff;
+				animation: blink 1s infinite;
+			}
+			@keyframes blink {
+				0%,
+				50% {
+					opacity: 1;
+				}
+				50.1%,
+				100% {
+					opacity: 0;
+				}
+			}
+		</style>
+
+		<script>
+			let source;
+			let text = "";
+			let activeIndex = 0;
+
+			function startStream() {
+				stopStream();
+				clear();
+				source = new EventSource("http://localhost:3001/stream");
+				// onmessage will only work if event is of type message else use addEventListener
+				source.onmessage = (event) => {
+					const element = document.getElementById("typewriter");
+					const data = JSON.parse(event.data);
+					text = data.msg;
+					setTimeout(() => type(), 0);
+				};
+				source.onopen = (e) => console.log("opened", event);
+				source.onerror = (e) => console.log("error", event);
+			}
+
+			async function type() {
+				const element = document.getElementById("typewriter");
+				while (activeIndex < text.length) {
+					element.innerHTML =
+						text.slice(0, activeIndex) +
+						'<span class="blinking-cursor">|</span>';
+					activeIndex++;
+					await wait(Math.random() * 150 + 50);
+				}
+				element.innerHTML =
+					text.slice(0, activeIndex) +
+					'<span class="blinking-cursor">|</span>';
+			}
+
+			async function wait(ms) {
+				return new Promise((resolve, reject) => {
+					setTimeout(() => {
+						resolve();
+					}, ms);
+				});
+			}
+
+			function stopStream() {
+				if (source) {
+					source.close();
+				}
+			}
+
+			function clear() {
+				const element = document.getElementById("typewriter");
+				element.textContent = "";
+				activeIndex = 0;
+				text = "";
+			}
+		</script>
+	</head>
+	<body>
+		<button onclick="startStream()">SSE Stream</button>
+		<button onclick="stopStream()">Stop Stream</button>
+		<br />
+		<div id="typewriter">
+			<span class="blinking-cursor">|</span>
+		</div>
+	</body>
+</html>
